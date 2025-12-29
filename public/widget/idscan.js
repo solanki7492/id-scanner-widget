@@ -1,59 +1,77 @@
-function B(e, t, i = !1) {
-  const n = t.width * 0.7, a = t.height * 0.4, o = (t.width - n) / 2, d = (t.height - a) / 2;
-  e.fillStyle = "rgba(0, 0, 0, 0.5)", e.fillRect(0, 0, t.width, t.height), e.clearRect(o, d, n, a), e.strokeStyle = i ? "#00ff99" : "#ff4444", e.lineWidth = 4, e.strokeRect(o, d, n, a);
-  const s = 30;
-  e.lineWidth = 6, e.beginPath(), e.moveTo(o, d + s), e.lineTo(o, d), e.lineTo(o + s, d), e.stroke(), e.beginPath(), e.moveTo(o + n - s, d), e.lineTo(o + n, d), e.lineTo(o + n, d + s), e.stroke(), e.beginPath(), e.moveTo(o, d + a - s), e.lineTo(o, d + a), e.lineTo(o + s, d + a), e.stroke(), e.beginPath(), e.moveTo(o + n - s, d + a), e.lineTo(o + n, d + a), e.lineTo(o + n, d + a - s), e.stroke();
+function U(e) {
+  const i = e.width * 0.7, t = e.height * 0.4, n = (e.width - i) / 2, a = (e.height - t) / 2;
+  return { x: n, y: a, w: i, h: t };
 }
-function M(e) {
-  const t = e.width * 0.7, i = e.height * 0.4, n = (e.width - t) / 2, a = (e.height - i) / 2;
-  return { x: n, y: a, w: t, h: i };
+function x(e, i, t = "idle") {
+  const { width: n, height: a } = i;
+  e.clearRect(0, 0, n, a), e.fillStyle = "rgba(0,0,0,0.6)", e.fillRect(0, 0, n, a);
+  const o = U(i);
+  e.clearRect(o.x, o.y, o.w, o.h);
+  let d = "#facc15";
+  t === "ready" && (d = "#22c55e"), t === "error" && (d = "#ef4444"), e.setLineDash([10, 8]), e.lineWidth = 3, e.strokeStyle = d, e.strokeRect(o.x, o.y, o.w, o.h);
 }
-let u = null;
-function S(e, t) {
-  const i = E(e), n = C(e);
-  return i < 60 ? { ok: !1, message: "Too dark", insideBox: !0 } : i > 220 ? { ok: !1, message: "Too bright", insideBox: !0 } : n > 25 ? { ok: !1, message: "Hold still", insideBox: !0 } : { ok: !0, message: "Hold steady", insideBox: !0 };
+let v = null;
+function O(e, i) {
+  const t = W(e), n = N(e);
+  return t < 60 ? {
+    ok: !1,
+    state: "error",
+    message: "Too dark"
+  } : t > 220 ? {
+    ok: !1,
+    state: "error",
+    message: "Too bright"
+  } : n > 25 ? {
+    ok: !1,
+    state: "idle",
+    message: "Hold still"
+  } : {
+    ok: !0,
+    state: "ready",
+    message: "Hold steady"
+  };
 }
-function E(e) {
-  let t = 0;
-  for (let i = 0; i < e.data.length; i += 4)
-    t += e.data[i];
-  return t / (e.data.length / 4);
+function W(e) {
+  let i = 0;
+  for (let t = 0; t < e.data.length; t += 4)
+    i += e.data[t];
+  return i / (e.data.length / 4);
 }
-function C(e) {
-  if (!u)
-    return u = e, 0;
-  let t = 0;
-  for (let i = 0; i < e.data.length; i += 4)
-    t += Math.abs(e.data[i] - u.data[i]);
-  return u = e, t / (e.data.length / 4);
+function N(e) {
+  if (!v)
+    return v = e, 0;
+  let i = 0;
+  for (let t = 0; t < e.data.length; t += 4)
+    i += Math.abs(e.data[t] - v.data[t]);
+  return v = e, i / (e.data.length / 4);
 }
-function H(e) {
-  return new Promise((t) => {
-    e.toBlob((i) => t(i), "image/jpeg", 0.85);
+function V(e) {
+  return new Promise((i) => {
+    e.toBlob((t) => i(t), "image/jpeg", 0.85);
   });
 }
-async function v(e, t) {
-  const i = new FormData();
-  i.append("image", e), await fetch("https://phyllotaxic-denita-shamefacedly.ngrok-free.dev/api/v1/documents", {
+async function A(e, i) {
+  const t = new FormData();
+  t.append("image", e), await fetch("https://phyllotaxic-denita-shamefacedly.ngrok-free.dev/api/v1/documents", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${t}`
+      Authorization: `Bearer ${i}`
     },
-    body: i
+    body: t
   });
 }
-async function I(e, t, i) {
+async function $(e, i, t) {
   if (!e.type.startsWith("image/")) {
     alert("Please select an image file");
     return;
   }
-  const n = i.querySelector(".idscan-widget-box"), a = n.innerHTML;
+  const n = t.querySelector(".idscan-widget-box"), a = n.innerHTML;
   n.innerHTML = `
     <h3 class="idscan-widget-title">Uploading...</h3>
     <p class="idscan-widget-subtitle">Please wait while we process your document</p>
   `;
   try {
-    await v(e, t), n.innerHTML = `
+    await A(e, i), n.innerHTML = `
       <h3 class="idscan-widget-title" style="color: #10b981;">✓ Success!</h3>
       <p class="idscan-widget-subtitle">Document uploaded successfully</p>
     `;
@@ -64,60 +82,79 @@ async function I(e, t, i) {
     `;
   }
   setTimeout(() => {
-    n.innerHTML = a, i.querySelector("#idscan-widget-upload-btn").onclick = () => {
-      i.querySelector("#idscan-widget-file-input").click();
+    n.innerHTML = a, t.querySelector("#idscan-widget-upload-btn").onclick = () => {
+      t.querySelector("#idscan-widget-file-input").click();
     };
   }, 2500);
 }
-async function F(e, t) {
-  const i = document.getElementById("idscan-widget-camera-container"), n = document.getElementById("idscan-widget-status"), a = i.querySelector("video"), o = i.querySelector("#idscan-widget-overlay"), d = i.querySelector("#idscan-widget-analysis");
-  let s = !0, r = null;
+async function G(e, i) {
+  const t = document.getElementById("idscan-widget-camera-container"), n = document.getElementById("idscan-widget-status"), a = t.querySelector("video"), o = t.querySelector("#idscan-widget-overlay"), d = t.querySelector("#idscan-widget-analysis");
+  let E = !0, f = null;
   try {
-    let g = function() {
-      o.width = a.videoWidth, o.height = a.videoHeight, d.width = a.videoWidth, d.height = a.videoHeight;
-    }, w = function() {
-      s = !1, r && r.getTracks().forEach((l) => l.stop()), t && t();
-    }, c = function() {
-      if (!s) return;
-      if (a.readyState !== a.HAVE_ENOUGH_DATA) {
-        requestAnimationFrame(c);
+    let M = function() {
+      E = !1, f && f.getTracks().forEach((c) => c.stop()), i && i();
+    }, I = function(c) {
+      let s = 255, h = 0, l = 0, b = 0;
+      const B = 400, T = 26, { data: w, width: m, height: F } = c;
+      for (let z = 0; z < B; z++) {
+        const j = Math.floor(Math.random() * m), D = Math.floor(Math.random() * F), p = (D * m + j) * 4, g = w[p];
+        if (s = Math.min(s, g), h = Math.max(h, g), j + 1 < m) {
+          const S = w[p + 4];
+          Math.abs(g - S) > T && l++;
+        }
+        if (D + 1 < F) {
+          const S = w[p + m * 4];
+          Math.abs(g - S) > T && l++;
+        }
+        const P = (g + w[p + 4] + w[p + m * 4]) / 3;
+        Math.abs(g - P) < 10 && b++;
+      }
+      const q = h - s, L = l / (B * 2), R = b / B;
+      return console.log([q, L, R]), q > 35 && L > 0.03 && R > 0.5;
+    }, u = function() {
+      if (!E) return;
+      if (H < 20) {
+        H++, n.textContent = "Adjusting focus...", x(r, o, "idle"), requestAnimationFrame(u);
         return;
       }
-      if (b < x) {
-        b++, n.textContent = "Adjusting focus...", requestAnimationFrame(c);
+      k.drawImage(a, 0, 0, d.width, d.height);
+      const c = k.getImageData(0, 0, d.width, d.height), s = U(o), h = k.getImageData(
+        s.x,
+        s.y,
+        s.w,
+        s.h
+      );
+      if (!I(h)) {
+        y = 0, n.textContent = "Place ID inside the frame", x(r, o, "error"), requestAnimationFrame(u);
         return;
       }
-      y.drawImage(a, 0, 0, d.width, d.height);
-      const l = y.getImageData(0, 0, d.width, d.height), k = M(o), m = S(l, k);
-      if (n.textContent = m.message, f.clearRect(0, 0, o.width, o.height), B(f, o, m.insideBox), m.ok ? h++ : h = 0, h > 45) {
-        H(d).then((T) => {
-          v(T, e.token), n.textContent = "✓ Captured! Processing...", n.style.color = "#10b981", setTimeout(() => {
-            w();
-          }, 1500);
+      const l = O(c, s);
+      if (n.textContent = l.message, x(r, o, l.state), l.ok ? y++ : y = 0, y > 40) {
+        n.textContent = "✓ Capturing...", x(r, o, "ready"), V(d).then((b) => {
+          A(b, e.token), setTimeout(M, 1200);
         });
         return;
       }
-      requestAnimationFrame(c);
+      requestAnimationFrame(u);
     };
-    var A = g, U = w, z = c;
-    r = await navigator.mediaDevices.getUserMedia({
+    var X = M, Y = I, Z = u;
+    f = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
         width: { ideal: 1920 },
         height: { ideal: 1080 }
       }
-    }), a.srcObject = r, await new Promise((l) => a.onloadedmetadata = l), await a.play(), g();
-    const f = o.getContext("2d"), y = d.getContext("2d");
-    let h = 0, b = 0;
-    const x = 30;
-    window.addEventListener("idscan-cleanup", w, { once: !0 }), c();
-  } catch (g) {
-    n.textContent = "Camera access denied", n.style.color = "#ef4444", console.error("Camera error:", g);
+    }), a.srcObject = f, await new Promise((c) => a.onloadedmetadata = c), await a.play(), o.width = a.videoWidth, o.height = a.videoHeight, d.width = a.videoWidth, d.height = a.videoHeight;
+    const r = o.getContext("2d"), k = d.getContext("2d");
+    let y = 0, H = 0;
+    window.addEventListener("idscan-cleanup", M, { once: !0 }), u();
+  } catch (r) {
+    console.error(r), n.textContent = "Camera access denied";
   }
 }
-function P(e, t = {}) {
-  const i = document.querySelector(e);
-  L(), i.innerHTML = `
+function J(e, i = {}) {
+  const t = document.querySelector(e);
+  Q(), t.innerHTML = `
     <div class="idscan-widget-container">
       <div class="idscan-widget-box">
         <h3 class="idscan-widget-title">Scan your ID</h3>
@@ -146,14 +183,14 @@ function P(e, t = {}) {
     document.getElementById("idscan-widget-file-input").click();
   }, document.getElementById("idscan-widget-file-input").onchange = (n) => {
     const a = n.target.files[0];
-    a && I(a, t.token, i);
+    a && $(a, i.token, t);
   }, document.getElementById("idscan-widget-camera-btn").onclick = () => {
-    q(t);
+    K(i);
   };
 }
-function q(e) {
-  const t = document.createElement("div");
-  t.id = "idscan-widget-modal", t.className = "idscan-widget-modal", t.innerHTML = `
+function K(e) {
+  const i = document.createElement("div");
+  i.id = "idscan-widget-modal", i.className = "idscan-widget-modal", i.innerHTML = `
     <div class="idscan-widget-modal-backdrop"></div>
     <div class="idscan-widget-modal-content">
       <div class="idscan-widget-modal-header">
@@ -173,19 +210,19 @@ function q(e) {
         <div class="idscan-widget-status" id="idscan-widget-status">Starting camera...</div>
       </div>
     </div>
-  `, document.body.appendChild(t), document.getElementById("idscan-widget-modal-close").onclick = () => {
-    p();
-  }, t.querySelector(".idscan-widget-modal-backdrop").onclick = () => {
-    p();
-  }, F(e, () => {
-    p();
+  `, document.body.appendChild(i), document.getElementById("idscan-widget-modal-close").onclick = () => {
+    C();
+  }, i.querySelector(".idscan-widget-modal-backdrop").onclick = () => {
+    C();
+  }, G(e, () => {
+    C();
   });
 }
-function p() {
+function C() {
   const e = document.getElementById("idscan-widget-modal");
   e && (window.dispatchEvent(new Event("idscan-cleanup")), e.remove());
 }
-function L() {
+function Q() {
   if (document.getElementById("idscan-widget-styles")) return;
   const e = document.createElement("style");
   e.id = "idscan-widget-styles", e.textContent = `
@@ -370,4 +407,4 @@ function L() {
     }
   `, document.head.appendChild(e);
 }
-window.IdScan = { mount: P };
+window.IdScan = { mount: J };

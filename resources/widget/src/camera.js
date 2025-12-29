@@ -27,21 +27,16 @@ export async function startCamera(options, onClose) {
     await new Promise(resolve => video.onloadedmetadata = resolve);
     await video.play();
 
-    function resize() {
-      overlay.width = video.videoWidth;
-      overlay.height = video.videoHeight;
-      analysis.width = video.videoWidth;
-      analysis.height = video.videoHeight;
-    }
-
-    resize();
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+    analysis.width = video.videoWidth;
+    analysis.height = video.videoHeight;
 
     const overlayCtx = overlay.getContext("2d");
     const analysisCtx = analysis.getContext("2d");
 
     let stable = 0;
     let warmupFrames = 0;
-    const WARMUP_LIMIT = 30;
 
     function cleanup() {
       isRunning = false;
@@ -51,45 +46,110 @@ export async function startCamera(options, onClose) {
       if (onClose) onClose();
     }
 
-    // Listen for modal close
-    window.addEventListener('idscan-cleanup', cleanup, { once: true });
+    window.addEventListener("idscan-cleanup", cleanup, { once: true });
+
+  function detectSomething(imageData) {
+      let min = 255, max = 0;
+      let edgeHits = 0;
+      let smoothHits = 0;
+
+      const samples = 400;
+      const edgeThreshold = 26;
+
+      const { data, width, height } = imageData;
+
+      for (let i = 0; i < samples; i++) {
+        const px = Math.floor(Math.random() * width);
+        const py = Math.floor(Math.random() * height);
+        const idx = (py * width + px) * 4;
+
+        const v = data[idx];
+
+        min = Math.min(min, v);
+        max = Math.max(max, v);
+
+        // Horizontal edge
+        if (px + 1 < width) {
+          const v2 = data[idx + 4];
+          if (Math.abs(v - v2) > edgeThreshold) edgeHits++;
+        }
+
+        // Vertical edge
+        if (py + 1 < height) {
+          const v3 = data[idx + width * 4];
+          if (Math.abs(v - v3) > edgeThreshold) edgeHits++;
+        }
+
+        // Local smoothness (paper/plastic vs wood texture)
+        const localAvg = (
+          v +
+          data[idx + 4] +
+          data[idx + width * 4]
+        ) / 3;
+
+        if (Math.abs(v - localAvg) < 10) smoothHits++;
+      }
+
+      const contrast = max - min;
+      const edgeRatio = edgeHits / (samples * 2);
+      const smoothRatio = smoothHits / samples;
+
+      console.log([contrast, edgeRatio, smoothRatio]);
+
+      return (
+        contrast > 35 &&
+        edgeRatio > 0.03 &&
+        smoothRatio > 0.50
+      );
+    }
 
     function loop() {
       if (!isRunning) return;
 
-      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (warmupFrames < WARMUP_LIMIT) {
+      if (warmupFrames < 20) {
         warmupFrames++;
         statusEl.textContent = "Adjusting focus...";
+        drawOverlay(overlayCtx, overlay, "idle");
         requestAnimationFrame(loop);
         return;
       }
 
       analysisCtx.drawImage(video, 0, 0, analysis.width, analysis.height);
       const frame = analysisCtx.getImageData(0, 0, analysis.width, analysis.height);
+
       const overlayBox = getOverlayBox(overlay);
-      const status = analyzeFrame(frame, overlayBox);
 
-      statusEl.textContent = status.message;
+      // fast object presence check
+      const roiFrame = analysisCtx.getImageData(
+        overlayBox.x,
+        overlayBox.y,
+        overlayBox.w,
+        overlayBox.h
+      );
 
-      overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-      drawOverlay(overlayCtx, overlay, status.insideBox);
+      if (!detectSomething(roiFrame)) {
+        stable = 0;
+        statusEl.textContent = "Place ID inside the frame";
+        drawOverlay(overlayCtx, overlay, "error");
+        requestAnimationFrame(loop);
+        return;
+      }
 
-      if (status.ok) stable++;
+      const result = analyzeFrame(frame, overlayBox);
+
+      statusEl.textContent = result.message;
+      drawOverlay(overlayCtx, overlay, result.state);
+
+      if (result.ok) stable++;
       else stable = 0;
 
-      if (stable > 45) {
+      if (stable > 40) {
+        statusEl.textContent = "✓ Capturing...";
+        drawOverlay(overlayCtx, overlay, "ready");
+
         captureFrame(analysis).then(blob => {
           upload(blob, options.token);
-          statusEl.textContent = "✓ Captured! Processing...";
-          statusEl.style.color = "#10b981";
-          setTimeout(() => {
-            cleanup();
-          }, 1500);
+          setTimeout(cleanup, 1200);
         });
         return;
       }
@@ -98,9 +158,9 @@ export async function startCamera(options, onClose) {
     }
 
     loop();
-  } catch (error) {
+
+  } catch (e) {
+    console.error(e);
     statusEl.textContent = "Camera access denied";
-    statusEl.style.color = "#ef4444";
-    console.error('Camera error:', error);
   }
 }
