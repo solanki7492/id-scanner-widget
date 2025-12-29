@@ -1,89 +1,106 @@
-import { drawOverlay } from './overlay';
+import { drawOverlay, getOverlayBox } from './overlay';
 import { analyzeFrame } from './analyzer';
 import { captureFrame } from './capture';
 import { upload } from './uploader';
-import { updateHint } from './ui';
 
-export async function startCamera(options) {
-  const root = document.getElementById("idscan-root");
+export async function startCamera(options, onClose) {
+  const container = document.getElementById("idscan-widget-camera-container");
+  const statusEl = document.getElementById("idscan-widget-status");
 
-  root.innerHTML = `
-    <video playsinline></video>
-    <canvas id="overlay"></canvas>
-    <canvas id="analysis" style="display:none;"></canvas>
-    <div id="idscan-hint">Starting camera...</div>
-  `;
+  const video = container.querySelector("video");
+  const overlay = container.querySelector("#idscan-widget-overlay");
+  const analysis = container.querySelector("#idscan-widget-analysis");
 
-  const video = root.querySelector("video");
-  const overlay = root.querySelector("#overlay");
-  const analysis = root.querySelector("#analysis");
+  let isRunning = true;
+  let stream = null;
 
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: "environment",
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    });
+
+    video.srcObject = stream;
+    await new Promise(resolve => video.onloadedmetadata = resolve);
+    await video.play();
+
+    function resize() {
+      overlay.width = video.videoWidth;
+      overlay.height = video.videoHeight;
+      analysis.width = video.videoWidth;
+      analysis.height = video.videoHeight;
     }
-  });
 
-  video.srcObject = stream;
-  await new Promise(resolve => video.onloadedmetadata = resolve);
-  await video.play();
+    resize();
 
-  function resize() {
-    overlay.width = video.videoWidth;
-    overlay.height = video.videoHeight;
-    analysis.width = video.videoWidth;
-    analysis.height = video.videoHeight;
-  }
+    const overlayCtx = overlay.getContext("2d");
+    const analysisCtx = analysis.getContext("2d");
 
-  resize();
-  window.addEventListener("resize", resize);
+    let stable = 0;
+    let warmupFrames = 0;
+    const WARMUP_LIMIT = 30;
 
-  const overlayCtx = overlay.getContext("2d");
-  const analysisCtx = analysis.getContext("2d");
+    function cleanup() {
+      isRunning = false;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (onClose) onClose();
+    }
 
-  let stable = 0;
-  let warmupFrames = 0;
-  const WARMUP_LIMIT = 30;   // ~0.5 seconds
+    // Listen for modal close
+    window.addEventListener('idscan-cleanup', cleanup, { once: true });
 
-  function loop() {
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    function loop() {
+      if (!isRunning) return;
+
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        requestAnimationFrame(loop);
+        return;
+      }
+
+      if (warmupFrames < WARMUP_LIMIT) {
+        warmupFrames++;
+        statusEl.textContent = "Adjusting focus...";
+        requestAnimationFrame(loop);
+        return;
+      }
+
+      analysisCtx.drawImage(video, 0, 0, analysis.width, analysis.height);
+      const frame = analysisCtx.getImageData(0, 0, analysis.width, analysis.height);
+      const overlayBox = getOverlayBox(overlay);
+      const status = analyzeFrame(frame, overlayBox);
+
+      statusEl.textContent = status.message;
+
+      overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+      drawOverlay(overlayCtx, overlay, status.insideBox);
+
+      if (status.ok) stable++;
+      else stable = 0;
+
+      if (stable > 45) {
+        captureFrame(analysis).then(blob => {
+          upload(blob, options.token);
+          statusEl.textContent = "✓ Captured! Processing...";
+          statusEl.style.color = "#10b981";
+          setTimeout(() => {
+            cleanup();
+          }, 1500);
+        });
+        return;
+      }
+
       requestAnimationFrame(loop);
-      return;
     }
 
-    // --- Warm-up phase (let autofocus settle) ---
-    if (warmupFrames < WARMUP_LIMIT) {
-      warmupFrames++;
-      updateHint("Adjusting focus...");
-      requestAnimationFrame(loop);
-      return;
-    }
-
-    // --- Analysis pass ---
-    analysisCtx.drawImage(video, 0, 0, analysis.width, analysis.height);
-    const frame = analysisCtx.getImageData(0, 0, analysis.width, analysis.height);
-    const status = analyzeFrame(frame);
-
-    updateHint(status.message);
-
-    // --- Overlay render ---
-    overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-    drawOverlay(overlayCtx, overlay);
-
-    if (status.ok) stable++;
-    else stable = 0;
-
-    // Require ~0.75s of perfect stability
-    if (stable > 45) {
-      captureFrame(analysis).then(blob => upload(blob, options.token));
-      updateHint("Captured");
-      return;
-    }
-
-    requestAnimationFrame(loop);
+    loop();
+  } catch (error) {
+    statusEl.textContent = "Camera access denied";
+    statusEl.style.color = "#ef4444";
+    console.error('Camera error:', error);
   }
-
-  loop();
 }

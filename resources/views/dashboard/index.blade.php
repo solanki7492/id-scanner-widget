@@ -4,8 +4,6 @@
 
 @section('content')
 <div class="px-4 sm:px-0">
-    <h2 class="text-2xl font-bold mb-6">Dashboard</h2>
-
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <div class="bg-white overflow-hidden shadow rounded-lg">
             <div class="p-5">
@@ -68,55 +66,105 @@
         </div>
     </div>
 
+    <!-- Widget Setup Guide -->
     <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:px-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Documents</h3>
+        <div class="px-6 py-5 border-b border-gray-200">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Getting Started with ID Scanner Widget</h3>
+            <p class="mt-1 text-sm text-gray-500">Follow these steps to integrate the ID scanner into your website</p>
         </div>
-        <div class="border-t border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($recentDocuments as $document)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
-                            {{ Str::limit($document->uuid, 8, '...') }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                @if($document->status === 'completed') bg-green-100 text-green-800
-                                @elseif($document->status === 'pending') bg-yellow-100 text-yellow-800
-                                @elseif($document->status === 'processing') bg-blue-100 text-blue-800
-                                @else bg-red-100 text-red-800 @endif">
-                                {{ ucfirst($document->status) }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $document->document_type ?? 'Unknown' }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $document->created_at->diffForHumans() }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ route('dashboard.documents.show', $document->uuid) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                            No documents found
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        
+        <div class="px-6 py-6">
+            <div class="space-y-6">
+                <!-- Step 1: Generate API Key -->
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 font-semibold">
+                            1
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h4 class="text-base font-semibold text-gray-900">Generate API Key</h4>
+                        <p class="mt-1 text-sm text-gray-600">Create an API key to authenticate your widget requests. Keep this key secure and never expose it in client-side code.</p>
+                        <div class="mt-3">
+                            <a href="{{ route('dashboard.api-keys.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                Generate API Key
+                            </a>
+                            <a href="{{ route('dashboard.api-keys.index') }}" class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                View All Keys
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Setup Webhook -->
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 font-semibold">
+                            2
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h4 class="text-base font-semibold text-gray-900">Configure Webhook</h4>
+                        <p class="mt-1 text-sm text-gray-600">Set up a webhook URL to receive real-time notifications when documents are processed, completed, or failed.</p>
+                        <div class="mt-3">
+                            <a href="{{ route('dashboard.webhooks.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Webhook
+                            </a>
+                            <a href="{{ route('dashboard.webhooks.index') }}" class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Manage Webhooks
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Embed Widget -->
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 font-semibold">
+                            3
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h4 class="text-base font-semibold text-gray-900">Embed the Widget</h4>
+                        <p class="mt-1 text-sm text-gray-600">Add the ID scanner widget to your website using the simple embed code below:</p>
+                        <div class="mt-3 bg-gray-900 rounded-lg p-4">
+                            <pre class="text-sm text-gray-100 overflow-x-auto"><code>&lt;div id="idscan"&gt;&lt;/div&gt;
+&lt;script src="{{ url('/widget/idscan.js') }}"&gt;&lt;/script&gt;
+&lt;script&gt;
+  IdScan.mount("#idscan", { token: "YOUR_API_KEY" });
+&lt;/script&gt;</code></pre>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Replace YOUR_API_KEY with your actual API key from step 1</p>
+                    </div>
+                </div>
+
+                <!-- Step 4: Test Integration -->
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 font-semibold">
+                            4
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h4 class="text-base font-semibold text-gray-900">Test Your Integration</h4>
+                        <p class="mt-1 text-sm text-gray-600">Test the widget with sample ID documents and monitor the results in your dashboard.</p>
+                        <div class="mt-3">
+                            <a href="{{ route('dashboard.documents.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                View Documents
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

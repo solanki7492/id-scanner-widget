@@ -5,9 +5,17 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Document;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use App\Services\EncryptedStorageService;
 
 class DocumentController extends Controller
 {
+     public function __construct(
+        private EncryptedStorageService $storageService
+    ) {
+        $this->storageService = $storageService;
+    }
+
     public function index(Request $request)
     {
         $tenant = $request->user()->tenant;
@@ -44,5 +52,15 @@ class DocumentController extends Controller
             ->firstOrFail();
 
         return view('dashboard.documents.show', compact('document'));
+    }
+
+    public function image(Document $document)
+    {
+        $decrypted = $this->storageService->retrieve($document->storage_path, $document->encryption_key);
+
+        return response($decrypted, 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 }

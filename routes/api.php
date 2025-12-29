@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Route;
 
 // API v1 routes - protected by API token authentication
 Route::prefix('v1')->middleware([
-    //AuthenticateApiToken::class,
-    //TenantRateLimiter::class,
+    AuthenticateApiToken::class,
+    TenantRateLimiter::class,
     LogApiRequest::class,
 ])->group(function () {
     

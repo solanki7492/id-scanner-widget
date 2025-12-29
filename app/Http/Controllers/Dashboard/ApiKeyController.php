@@ -58,22 +58,18 @@ class ApiKeyController extends Controller
         );
 
         return redirect()
-            ->route('dashboard.api-keys.show', $apiKey)
+            ->route('dashboard.api-keys.index', $apiKey)
             ->with('success', 'API key created successfully')
             ->with('new_key', $key);
     }
 
     public function show(ApiKey $apiKey)
     {
-        $this->authorize('view', $apiKey);
-
         return view('dashboard.api-keys.show', compact('apiKey'));
     }
 
     public function destroy(Request $request, ApiKey $apiKey)
     {
-        $this->authorize('delete', $apiKey);
-
         $tenant = $request->user()->tenant;
 
         // Log action
@@ -96,8 +92,6 @@ class ApiKeyController extends Controller
 
     public function toggle(Request $request, ApiKey $apiKey)
     {
-        $this->authorize('update', $apiKey);
-
         $apiKey->update([
             'is_active' => !$apiKey->is_active
         ]);

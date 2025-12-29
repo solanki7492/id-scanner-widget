@@ -25,10 +25,15 @@ class EncryptedStorageService
         $encryptedData = $this->encrypt($contents, $encryptionKey);
         
         // Generate storage path
-        $storagePath = $this->generateStoragePath($tenantId, $file->getClientOriginalExtension());
+       $extension = $file->getClientOriginalExtension()
+            ?: $file->extension()
+            ?: explode('/', $file->getMimeType())[1]
+            ?: 'png';
+
+        $storagePath = $this->generateStoragePath($tenantId, $extension);
         
         // Store encrypted file
-        Storage::disk('s3')->put($storagePath, $encryptedData);
+        Storage::disk('local')->put($storagePath, $encryptedData);
         
         return [
             'storage_path' => $storagePath,
@@ -42,7 +47,7 @@ class EncryptedStorageService
      */
     public function retrieve(string $storagePath, string $encryptionKey): string
     {
-        $encryptedData = Storage::disk('s3')->get($storagePath);
+        $encryptedData = Storage::disk('local')->get($storagePath);
         $key = base64_decode($encryptionKey);
         
         return $this->decrypt($encryptedData, $key);

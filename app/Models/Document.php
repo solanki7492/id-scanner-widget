@@ -128,4 +128,9 @@ class Document extends Model
         return $query->whereNotNull('will_be_deleted_at')
             ->where('will_be_deleted_at', '<=', now());
     }
+
+    public function getImageUrlAttribute()
+    {
+        return route('dashboard.documents.image', $this);
+    }
 }

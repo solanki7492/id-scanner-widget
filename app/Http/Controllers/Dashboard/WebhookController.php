@@ -78,26 +78,20 @@ class WebhookController extends Controller
 
     public function show(Webhook $webhook)
     {
-        $this->authorize('view', $webhook);
-
         $webhook->load(['deliveries' => function ($query) {
             $query->orderBy('created_at', 'desc')->limit(20);
         }]);
 
-        return view('dashboard.webhooks.show', compact('webhook'));
+        return view('dashboard.webhooks.index', compact('webhook'));
     }
 
     public function edit(Webhook $webhook)
     {
-        $this->authorize('update', $webhook);
-
         return view('dashboard.webhooks.edit', compact('webhook'));
     }
 
     public function update(Request $request, Webhook $webhook)
     {
-        $this->authorize('update', $webhook);
-
         $request->validate([
             'url' => 'required|url|max:500',
             'events' => 'nullable|array',
@@ -122,14 +116,12 @@ class WebhookController extends Controller
         );
 
         return redirect()
-            ->route('dashboard.webhooks.show', $webhook)
+            ->route('dashboard.webhooks.index', $webhook)
             ->with('success', 'Webhook updated successfully');
     }
 
     public function destroy(Request $request, Webhook $webhook)
     {
-        $this->authorize('delete', $webhook);
-
         $tenant = $request->user()->tenant;
 
         // Log action

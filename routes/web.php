@@ -9,8 +9,9 @@ use App\Http\Controllers\Dashboard\WebhookController;
 use App\Http\Middleware\EnsureTenantAccess;
 use Illuminate\Support\Facades\Route;
 
+// Redirect root to login
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 Route::get('/test-widget', fn() => view('test-widget'));
@@ -26,6 +27,9 @@ Route::middleware(['auth', EnsureTenantAccess::class])->prefix('dashboard')->nam
     // Documents
     Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('documents/{uuid}', [DocumentController::class, 'show'])->name('documents.show');
+
+    Route::get('/documents/{document}/image', [DocumentController::class, 'image'])
+    ->name('documents.image');
     
     // Webhooks
     Route::resource('webhooks', WebhookController::class);
