@@ -1,8 +1,10 @@
 import { startCamera } from './camera';
 import { handleFileUpload } from './uploader';
 
-function mount(selector, options = {}) {
+async function mount(selector, options = {}) {
   const container = document.querySelector(selector);
+
+  await loadOpenCV();
 
   // Inject widget styles
   injectStyles();
@@ -295,6 +297,31 @@ function injectStyles() {
     }
   `;
   document.head.appendChild(style);
+}
+
+function loadOpenCV() {
+  return new Promise((resolve, reject) => {
+    if (window.cv && window.cv.Mat) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://docs.opencv.org/4.x/opencv.js';
+    script.async = true;
+
+    script.onload = () => {
+      const check = setInterval(() => {
+        if (window.cv && window.cv.Mat) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 50);
+    };
+
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
 }
 
 window.IdScan = { mount };

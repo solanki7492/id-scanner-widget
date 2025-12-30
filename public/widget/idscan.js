@@ -1,18 +1,21 @@
-function U(e) {
-  const i = e.width * 0.7, t = e.height * 0.4, n = (e.width - i) / 2, a = (e.height - t) / 2;
-  return { x: n, y: a, w: i, h: t };
+function z(e) {
+  const t = e.width * 0.85, n = e.height * 0.45;
+  let d = t, a = d / 1.6;
+  a > n && (a = n, d = a * 1.6);
+  const o = (e.width - d) / 2, m = (e.height - a) / 2;
+  return { x: o, y: m, w: d, h: a };
 }
-function x(e, i, t = "idle") {
-  const { width: n, height: a } = i;
-  e.clearRect(0, 0, n, a), e.fillStyle = "rgba(0,0,0,0.6)", e.fillRect(0, 0, n, a);
-  const o = U(i);
-  e.clearRect(o.x, o.y, o.w, o.h);
-  let d = "#facc15";
-  t === "ready" && (d = "#22c55e"), t === "error" && (d = "#ef4444"), e.setLineDash([10, 8]), e.lineWidth = 3, e.strokeStyle = d, e.strokeRect(o.x, o.y, o.w, o.h);
+function f(e, i, t = "idle") {
+  const { width: n, height: d } = i;
+  e.clearRect(0, 0, n, d), e.fillStyle = "rgba(0,0,0,0.6)", e.fillRect(0, 0, n, d);
+  const a = z(i);
+  e.clearRect(a.x, a.y, a.w, a.h);
+  let o = "#facc15";
+  t === "ready" && (o = "#22c55e"), t === "error" && (o = "#ef4444"), e.setLineDash([10, 8]), e.lineWidth = 3, e.strokeStyle = o, e.strokeRect(a.x, a.y, a.w, a.h);
 }
-let v = null;
-function O(e, i) {
-  const t = W(e), n = N(e);
+let C = null;
+function N(e, i) {
+  const t = G(e), n = X(e);
   return t < 60 ? {
     ok: !1,
     state: "error",
@@ -31,26 +34,26 @@ function O(e, i) {
     message: "Hold steady"
   };
 }
-function W(e) {
+function G(e) {
   let i = 0;
   for (let t = 0; t < e.data.length; t += 4)
     i += e.data[t];
   return i / (e.data.length / 4);
 }
-function N(e) {
-  if (!v)
-    return v = e, 0;
+function X(e) {
+  if (!C)
+    return C = e, 0;
   let i = 0;
   for (let t = 0; t < e.data.length; t += 4)
-    i += Math.abs(e.data[t] - v.data[t]);
-  return v = e, i / (e.data.length / 4);
+    i += Math.abs(e.data[t] - C.data[t]);
+  return C = e, i / (e.data.length / 4);
 }
-function V(e) {
+function Y(e) {
   return new Promise((i) => {
     e.toBlob((t) => i(t), "image/jpeg", 0.85);
   });
 }
-async function A(e, i) {
+async function j(e, i) {
   const t = new FormData();
   t.append("image", e), await fetch("https://phyllotaxic-denita-shamefacedly.ngrok-free.dev/api/v1/documents", {
     method: "POST",
@@ -65,13 +68,13 @@ async function $(e, i, t) {
     alert("Please select an image file");
     return;
   }
-  const n = t.querySelector(".idscan-widget-box"), a = n.innerHTML;
+  const n = t.querySelector(".idscan-widget-box"), d = n.innerHTML;
   n.innerHTML = `
     <h3 class="idscan-widget-title">Uploading...</h3>
     <p class="idscan-widget-subtitle">Please wait while we process your document</p>
   `;
   try {
-    await A(e, i), n.innerHTML = `
+    await j(e, i), n.innerHTML = `
       <h3 class="idscan-widget-title" style="color: #10b981;">✓ Success!</h3>
       <p class="idscan-widget-subtitle">Document uploaded successfully</p>
     `;
@@ -82,79 +85,98 @@ async function $(e, i, t) {
     `;
   }
   setTimeout(() => {
-    n.innerHTML = a, t.querySelector("#idscan-widget-upload-btn").onclick = () => {
+    n.innerHTML = d, t.querySelector("#idscan-widget-upload-btn").onclick = () => {
       t.querySelector("#idscan-widget-file-input").click();
     };
   }, 2500);
 }
-async function G(e, i) {
-  const t = document.getElementById("idscan-widget-camera-container"), n = document.getElementById("idscan-widget-status"), a = t.querySelector("video"), o = t.querySelector("#idscan-widget-overlay"), d = t.querySelector("#idscan-widget-analysis");
-  let E = !0, f = null;
+async function J(e, i) {
+  const t = document.getElementById("idscan-widget-camera-container"), n = document.getElementById("idscan-widget-status"), d = t.querySelector("video"), a = t.querySelector("#idscan-widget-overlay"), o = t.querySelector("#idscan-widget-analysis");
+  let m = 0, T = !1;
+  const U = 10;
+  let A = !0, v = null, y = !1;
+  if (typeof cv > "u") {
+    n.textContent = "Loading OpenCV...";
+    const s = setInterval(() => {
+      typeof cv < "u" && cv.Mat && (clearInterval(s), y = !0);
+    }, 100);
+  } else
+    y = !0;
   try {
     let M = function() {
-      E = !1, f && f.getTracks().forEach((c) => c.stop()), i && i();
-    }, I = function(c) {
-      let s = 255, h = 0, l = 0, b = 0;
-      const B = 400, T = 26, { data: w, width: m, height: F } = c;
-      for (let z = 0; z < B; z++) {
-        const j = Math.floor(Math.random() * m), D = Math.floor(Math.random() * F), p = (D * m + j) * 4, g = w[p];
-        if (s = Math.min(s, g), h = Math.max(h, g), j + 1 < m) {
-          const S = w[p + 4];
-          Math.abs(g - S) > T && l++;
+      A = !1, v && v.getTracks().forEach((r) => r.stop()), i && i();
+    }, D = function(r, c) {
+      if (!y || typeof cv > "u") return !1;
+      try {
+        const w = cv.matFromImageData(r), l = new cv.Mat(), h = new cv.Mat(), I = new cv.Mat(), x = new cv.MatVector(), O = new cv.Mat();
+        cv.cvtColor(w, l, cv.COLOR_RGBA2GRAY), cv.GaussianBlur(l, h, new cv.Size(5, 5), 0), cv.Canny(h, I, 50, 150), cv.findContours(I, x, O, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+        let B = !1;
+        const V = c.w * c.h * 0.3, _ = c.w * c.h * 0.95;
+        for (let E = 0; E < x.size(); E++) {
+          const p = x.get(E), F = cv.contourArea(p);
+          if (F > V && F < _) {
+            const W = cv.arcLength(p, !0), R = new cv.Mat();
+            if (cv.approxPolyDP(p, R, 0.02 * W, !0), R.rows === 4) {
+              const u = cv.boundingRect(p), P = u.x + u.width / 2, q = u.y + u.height / 2;
+              if (P > c.x && P < c.x + c.w && q > c.y && q < c.y + c.h) {
+                const k = u.width / u.height;
+                if (k > 1.4 && k < 1.9 || k > 0.5 && k < 0.8) {
+                  B = !0;
+                  break;
+                }
+              }
+            }
+            R.delete();
+          }
+          p.delete();
         }
-        if (D + 1 < F) {
-          const S = w[p + m * 4];
-          Math.abs(g - S) > T && l++;
-        }
-        const P = (g + w[p + 4] + w[p + m * 4]) / 3;
-        Math.abs(g - P) < 10 && b++;
+        return w.delete(), l.delete(), h.delete(), I.delete(), x.delete(), O.delete(), B;
+      } catch (w) {
+        return console.error("OpenCV detection error:", w), !1;
       }
-      const q = h - s, L = l / (B * 2), R = b / B;
-      return console.log([q, L, R]), q > 35 && L > 0.03 && R > 0.5;
-    }, u = function() {
-      if (!E) return;
-      if (H < 20) {
-        H++, n.textContent = "Adjusting focus...", x(r, o, "idle"), requestAnimationFrame(u);
+    }, g = function() {
+      if (!A) return;
+      if (!y) {
+        n.textContent = "Loading OpenCV...", f(s, a, "idle"), requestAnimationFrame(g);
         return;
       }
-      k.drawImage(a, 0, 0, d.width, d.height);
-      const c = k.getImageData(0, 0, d.width, d.height), s = U(o), h = k.getImageData(
-        s.x,
-        s.y,
-        s.w,
-        s.h
-      );
-      if (!I(h)) {
-        y = 0, n.textContent = "Place ID inside the frame", x(r, o, "error"), requestAnimationFrame(u);
+      if (L < 20) {
+        L++, n.textContent = "Adjusting focus...", f(s, a, "idle"), requestAnimationFrame(g);
         return;
       }
-      const l = O(c, s);
-      if (n.textContent = l.message, x(r, o, l.state), l.ok ? y++ : y = 0, y > 40) {
-        n.textContent = "✓ Capturing...", x(r, o, "ready"), V(d).then((b) => {
-          A(b, e.token), setTimeout(M, 1200);
+      H.drawImage(d, 0, 0, o.width, o.height);
+      const r = H.getImageData(0, 0, o.width, o.height), c = z(a);
+      if (m++, m % U === 0 && (T = D(r, c)), !T) {
+        b = 0, n.textContent = "Place ID inside the frame", f(s, a, "error"), requestAnimationFrame(g);
+        return;
+      }
+      const l = N(r, c);
+      if (n.textContent = l.message, f(s, a, l.state), l.ok ? b++ : b = 0, b > 40) {
+        n.textContent = "✓ Capturing...", f(s, a, "ready"), Y(o).then((h) => {
+          j(h, e.token), setTimeout(M, 1200);
         });
         return;
       }
-      requestAnimationFrame(u);
+      requestAnimationFrame(g);
     };
-    var X = M, Y = I, Z = u;
-    f = await navigator.mediaDevices.getUserMedia({
+    var te = M, ie = D, ne = g;
+    v = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
         width: { ideal: 1920 },
         height: { ideal: 1080 }
       }
-    }), a.srcObject = f, await new Promise((c) => a.onloadedmetadata = c), await a.play(), o.width = a.videoWidth, o.height = a.videoHeight, d.width = a.videoWidth, d.height = a.videoHeight;
-    const r = o.getContext("2d"), k = d.getContext("2d");
-    let y = 0, H = 0;
-    window.addEventListener("idscan-cleanup", M, { once: !0 }), u();
-  } catch (r) {
-    console.error(r), n.textContent = "Camera access denied";
+    }), d.srcObject = v, await new Promise((r) => d.onloadedmetadata = r), await d.play(), a.width = d.videoWidth, a.height = d.videoHeight, o.width = d.videoWidth, o.height = d.videoHeight;
+    const s = a.getContext("2d"), H = o.getContext("2d");
+    let b = 0, L = 0;
+    window.addEventListener("idscan-cleanup", M, { once: !0 }), g();
+  } catch (s) {
+    console.error(s), n.textContent = "Camera access denied";
   }
 }
-function J(e, i = {}) {
+async function K(e, i = {}) {
   const t = document.querySelector(e);
-  Q(), t.innerHTML = `
+  await ee(), Z(), t.innerHTML = `
     <div class="idscan-widget-container">
       <div class="idscan-widget-box">
         <h3 class="idscan-widget-title">Scan your ID</h3>
@@ -182,13 +204,13 @@ function J(e, i = {}) {
   `, document.getElementById("idscan-widget-upload-btn").onclick = () => {
     document.getElementById("idscan-widget-file-input").click();
   }, document.getElementById("idscan-widget-file-input").onchange = (n) => {
-    const a = n.target.files[0];
-    a && $(a, i.token, t);
+    const d = n.target.files[0];
+    d && $(d, i.token, t);
   }, document.getElementById("idscan-widget-camera-btn").onclick = () => {
-    K(i);
+    Q(i);
   };
 }
-function K(e) {
+function Q(e) {
   const i = document.createElement("div");
   i.id = "idscan-widget-modal", i.className = "idscan-widget-modal", i.innerHTML = `
     <div class="idscan-widget-modal-backdrop"></div>
@@ -211,18 +233,18 @@ function K(e) {
       </div>
     </div>
   `, document.body.appendChild(i), document.getElementById("idscan-widget-modal-close").onclick = () => {
-    C();
+    S();
   }, i.querySelector(".idscan-widget-modal-backdrop").onclick = () => {
-    C();
-  }, G(e, () => {
-    C();
+    S();
+  }, J(e, () => {
+    S();
   });
 }
-function C() {
+function S() {
   const e = document.getElementById("idscan-widget-modal");
   e && (window.dispatchEvent(new Event("idscan-cleanup")), e.remove());
 }
-function Q() {
+function Z() {
   if (document.getElementById("idscan-widget-styles")) return;
   const e = document.createElement("style");
   e.id = "idscan-widget-styles", e.textContent = `
@@ -407,4 +429,18 @@ function Q() {
     }
   `, document.head.appendChild(e);
 }
-window.IdScan = { mount: J };
+function ee() {
+  return new Promise((e, i) => {
+    if (window.cv && window.cv.Mat) {
+      e();
+      return;
+    }
+    const t = document.createElement("script");
+    t.src = "https://docs.opencv.org/4.x/opencv.js", t.async = !0, t.onload = () => {
+      const n = setInterval(() => {
+        window.cv && window.cv.Mat && (clearInterval(n), e());
+      }, 50);
+    }, t.onerror = i, document.head.appendChild(t);
+  });
+}
+window.IdScan = { mount: K };

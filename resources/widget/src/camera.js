@@ -11,8 +11,27 @@ export async function startCamera(options, onClose) {
   const overlay = container.querySelector("#idscan-widget-overlay");
   const analysis = container.querySelector("#idscan-widget-analysis");
 
+  let frameCount = 0;
+  let lastCardDetected = false;
+
+  const CV_THROTTLE = 10;
+
   let isRunning = true;
   let stream = null;
+  let cvReady = false;
+
+  // Wait for OpenCV.js to load
+  if (typeof cv === 'undefined') {
+    statusEl.textContent = "Loading OpenCV...";
+    const checkCV = setInterval(() => {
+      if (typeof cv !== 'undefined' && cv.Mat) {
+        clearInterval(checkCV);
+        cvReady = true;
+      }
+    }, 100);
+  } else {
+    cvReady = true;
+  }
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -48,63 +67,98 @@ export async function startCamera(options, onClose) {
 
     window.addEventListener("idscan-cleanup", cleanup, { once: true });
 
-  function detectSomething(imageData) {
-      let min = 255, max = 0;
-      let edgeHits = 0;
-      let smoothHits = 0;
+    // OpenCV.js card detection function
+    function detectCardWithOpenCV(imageData, overlayBox) {
+      if (!cvReady || typeof cv === 'undefined') return false;
 
-      const samples = 400;
-      const edgeThreshold = 26;
+      try {
+        // Create OpenCV Mat from ImageData
+        const src = cv.matFromImageData(imageData);
+        const gray = new cv.Mat();
+        const blurred = new cv.Mat();
+        const edges = new cv.Mat();
+        const contours = new cv.MatVector();
+        const hierarchy = new cv.Mat();
 
-      const { data, width, height } = imageData;
+        // Convert to grayscale
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-      for (let i = 0; i < samples; i++) {
-        const px = Math.floor(Math.random() * width);
-        const py = Math.floor(Math.random() * height);
-        const idx = (py * width + px) * 4;
+        // Apply Gaussian blur to reduce noise
+        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
 
-        const v = data[idx];
+        // Edge detection using Canny
+        cv.Canny(blurred, edges, 50, 150);
 
-        min = Math.min(min, v);
-        max = Math.max(max, v);
+        // Find contours
+        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-        // Horizontal edge
-        if (px + 1 < width) {
-          const v2 = data[idx + 4];
-          if (Math.abs(v - v2) > edgeThreshold) edgeHits++;
+        let cardDetected = false;
+        const minArea = (overlayBox.w * overlayBox.h) * 0.3; // At least 30% of box area
+        const maxArea = (overlayBox.w * overlayBox.h) * 0.95; // At most 95% of box area
+
+        // Check each contour
+        for (let i = 0; i < contours.size(); i++) {
+          const contour = contours.get(i);
+          const area = cv.contourArea(contour);
+
+          if (area > minArea && area < maxArea) {
+            // Approximate contour to polygon
+            const peri = cv.arcLength(contour, true);
+            const approx = new cv.Mat();
+            cv.approxPolyDP(contour, approx, 0.02 * peri, true);
+
+            // ID cards typically have 4 corners (rectangular)
+            if (approx.rows === 4) {
+              // Get bounding rectangle
+              const rect = cv.boundingRect(contour);
+
+              // Check if contour is within overlay box
+              const centerX = rect.x + rect.width / 2;
+              const centerY = rect.y + rect.height / 2;
+
+              if (centerX > overlayBox.x &&
+                centerX < overlayBox.x + overlayBox.w &&
+                centerY > overlayBox.y &&
+                centerY < overlayBox.y + overlayBox.h) {
+
+                // Check aspect ratio (ID cards are typically 1.5:1 to 1.8:1)
+                const aspectRatio = rect.width / rect.height;
+                if ((aspectRatio > 1.4 && aspectRatio < 1.9) ||
+                  (aspectRatio > 0.5 && aspectRatio < 0.8)) { // Also check vertical orientation
+                  cardDetected = true;
+                  break;
+                }
+              }
+            }
+            approx.delete();
+          }
+          contour.delete();
         }
 
-        // Vertical edge
-        if (py + 1 < height) {
-          const v3 = data[idx + width * 4];
-          if (Math.abs(v - v3) > edgeThreshold) edgeHits++;
-        }
+        // Cleanup OpenCV resources
+        src.delete();
+        gray.delete();
+        blurred.delete();
+        edges.delete();
+        contours.delete();
+        hierarchy.delete();
 
-        // Local smoothness (paper/plastic vs wood texture)
-        const localAvg = (
-          v +
-          data[idx + 4] +
-          data[idx + width * 4]
-        ) / 3;
-
-        if (Math.abs(v - localAvg) < 10) smoothHits++;
+        return cardDetected;
+      } catch (error) {
+        console.error('OpenCV detection error:', error);
+        return false;
       }
-
-      const contrast = max - min;
-      const edgeRatio = edgeHits / (samples * 2);
-      const smoothRatio = smoothHits / samples;
-
-      console.log([contrast, edgeRatio, smoothRatio]);
-
-      return (
-        contrast > 35 &&
-        edgeRatio > 0.03 &&
-        smoothRatio > 0.50
-      );
     }
 
     function loop() {
       if (!isRunning) return;
+
+      if (!cvReady) {
+        statusEl.textContent = "Loading OpenCV...";
+        drawOverlay(overlayCtx, overlay, "idle");
+        requestAnimationFrame(loop);
+        return;
+      }
 
       if (warmupFrames < 20) {
         warmupFrames++;
@@ -119,15 +173,16 @@ export async function startCamera(options, onClose) {
 
       const overlayBox = getOverlayBox(overlay);
 
-      // fast object presence check
-      const roiFrame = analysisCtx.getImageData(
-        overlayBox.x,
-        overlayBox.y,
-        overlayBox.w,
-        overlayBox.h
-      );
+      // Use OpenCV.js for card detection
+      frameCount++;
 
-      if (!detectSomething(roiFrame)) {
+      if (frameCount % CV_THROTTLE === 0) {
+        lastCardDetected = detectCardWithOpenCV(frame, overlayBox);
+      }
+
+      const cardDetected = lastCardDetected;
+
+      if (!cardDetected) {
         stable = 0;
         statusEl.textContent = "Place ID inside the frame";
         drawOverlay(overlayCtx, overlay, "error");
@@ -135,6 +190,7 @@ export async function startCamera(options, onClose) {
         return;
       }
 
+      // Run quality checks (brightness, motion, etc.)
       const result = analyzeFrame(frame, overlayBox);
 
       statusEl.textContent = result.message;
