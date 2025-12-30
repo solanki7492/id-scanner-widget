@@ -58,7 +58,7 @@ class DocumentController extends Controller
                 'original_filename' => $storageData['original_filename'],
                 'storage_path' => $storageData['storage_path'],
                 'encryption_key' => $storageData['encryption_key'],
-                'status' => 'pending',
+                'status' => 'completed',
                 'client_ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);

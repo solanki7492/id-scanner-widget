@@ -444,14 +444,14 @@ class DocumentParserService
             return [
                 'raw_value' => null,
                 'normalized_value' => null,
-                'confidence' => 0.0,
+                // 'confidence' => 0.0,
             ];
         }
 
         return [
             'raw_value' => $value,
             'normalized_value' => $this->normalizeValue($value),
-            'confidence' => $this->getFieldConfidence($value, $blocks),
+            // 'confidence' => $this->getFieldConfidence($value, $blocks),
         ];
     }
 
