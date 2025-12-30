@@ -10,11 +10,13 @@ use App\Services\EncryptedStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Services\DocumentOcrService;
 
 class DocumentController extends Controller
 {
     public function __construct(
-        private EncryptedStorageService $storageService
+        private EncryptedStorageService $storageService,
+        private DocumentOcrService $ocrService
     ) {}
 
     /**
@@ -40,6 +42,9 @@ class DocumentController extends Controller
         $apiKey = $request->get('api_key');
 
         try {
+
+            $extractedFields = $this->ocrService->extractData($request->file('image'));
+
             // Store encrypted file
             $storageData = $this->storageService->store(
                 $request->file('image'),
@@ -77,6 +82,7 @@ class DocumentController extends Controller
 
             return response()->json([
                 'success' => true,
+                'extracted_fields' => $extractedFields,
                 'document_id' => $document->uuid,
                 'status' => $document->status,
                 'message' => 'Document uploaded successfully and is being processed'

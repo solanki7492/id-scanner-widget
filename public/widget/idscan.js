@@ -1,30 +1,30 @@
-function z(e) {
-  const t = e.width * 0.85, n = e.height * 0.45;
-  let d = t, a = d / 1.6;
-  a > n && (a = n, d = a * 1.6);
-  const o = (e.width - d) / 2, m = (e.height - a) / 2;
-  return { x: o, y: m, w: d, h: a };
+function U(e) {
+  const i = e.width * 0.85, a = e.height * 0.45;
+  let o = i, n = o / 1.6;
+  n > a && (n = a, o = n * 1.6);
+  const d = (e.width - o) / 2, v = (e.height - n) / 2;
+  return { x: d, y: v, w: o, h: n };
 }
-function f(e, i, t = "idle") {
-  const { width: n, height: d } = i;
-  e.clearRect(0, 0, n, d), e.fillStyle = "rgba(0,0,0,0.6)", e.fillRect(0, 0, n, d);
-  const a = z(i);
-  e.clearRect(a.x, a.y, a.w, a.h);
-  let o = "#facc15";
-  t === "ready" && (o = "#22c55e"), t === "error" && (o = "#ef4444"), e.setLineDash([10, 8]), e.lineWidth = 3, e.strokeStyle = o, e.strokeRect(a.x, a.y, a.w, a.h);
+function y(e, t, i = "idle") {
+  const { width: a, height: o } = t;
+  e.clearRect(0, 0, a, o), e.fillStyle = "rgba(0,0,0,0.6)", e.fillRect(0, 0, a, o);
+  const n = U(t);
+  e.clearRect(n.x, n.y, n.w, n.h);
+  let d = "#facc15";
+  i === "ready" && (d = "#22c55e"), i === "error" && (d = "#ef4444"), e.setLineDash([10, 8]), e.lineWidth = 3, e.strokeStyle = d, e.strokeRect(n.x, n.y, n.w, n.h);
 }
-let C = null;
-function N(e, i) {
-  const t = G(e), n = X(e);
-  return t < 60 ? {
+let L = null;
+function K(e, t) {
+  const i = Q(e), a = Z(e);
+  return i < 60 ? {
     ok: !1,
     state: "error",
     message: "Too dark"
-  } : t > 220 ? {
+  } : i > 220 ? {
     ok: !1,
     state: "error",
     message: "Too bright"
-  } : n > 25 ? {
+  } : a > 25 ? {
     ok: !1,
     state: "idle",
     message: "Hold still"
@@ -34,149 +34,561 @@ function N(e, i) {
     message: "Hold steady"
   };
 }
-function G(e) {
-  let i = 0;
-  for (let t = 0; t < e.data.length; t += 4)
-    i += e.data[t];
-  return i / (e.data.length / 4);
+function Q(e) {
+  let t = 0;
+  for (let i = 0; i < e.data.length; i += 4)
+    t += e.data[i];
+  return t / (e.data.length / 4);
 }
-function X(e) {
-  if (!C)
-    return C = e, 0;
-  let i = 0;
-  for (let t = 0; t < e.data.length; t += 4)
-    i += Math.abs(e.data[t] - C.data[t]);
-  return C = e, i / (e.data.length / 4);
+function Z(e) {
+  if (!L)
+    return L = e, 0;
+  let t = 0;
+  for (let i = 0; i < e.data.length; i += 4)
+    t += Math.abs(e.data[i] - L.data[i]);
+  return L = e, t / (e.data.length / 4);
 }
-function Y(e) {
-  return new Promise((i) => {
-    e.toBlob((t) => i(t), "image/jpeg", 0.85);
+function ee(e) {
+  return new Promise((t) => {
+    e.toBlob((i) => t(i), "image/jpeg", 0.85);
   });
 }
-async function j(e, i) {
-  const t = new FormData();
-  t.append("image", e), await fetch("https://phyllotaxic-denita-shamefacedly.ngrok-free.dev/api/v1/documents", {
+function V(e, t) {
+  const i = document.createElement("div");
+  i.className = "idscan-data-popup-overlay";
+  const a = te(e);
+  i.innerHTML = `
+    <div class="idscan-data-popup">
+      <div class="idscan-data-popup-header">
+        <h3 class="idscan-data-popup-title">Extracted Document Data</h3>
+        <button class="idscan-data-popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="idscan-data-popup-content">
+        ${a}
+      </div>
+    </div>
+  `, t.appendChild(i), ie(i), setTimeout(() => i.classList.add("active"), 10);
+}
+function te(e) {
+  let t = "";
+  e.document_type && (t += H("Document Type", e.document_type, "document_type")), e.issuing_country && (t += H("Issuing Country", e.issuing_country, "issuing_country"));
+  const i = {
+    name: "Name",
+    dob: "Date of Birth",
+    place_of_birth: "Place of Birth",
+    gender: "Gender",
+    nationality: "Nationality",
+    document_number: "Document Number",
+    issue_date: "Issue Date",
+    expiry_date: "Expiry Date",
+    card_number: "Card Number"
+  };
+  for (const [a, o] of Object.entries(i))
+    if (e[a]) {
+      const n = e[a], d = n.normalized_value || n.raw_value || n;
+      d && (t += H(o, d, a));
+    }
+  return t || '<p class="idscan-data-popup-empty">No data extracted</p>';
+}
+function H(e, t, i) {
+  return `
+    <div class="idscan-data-field">
+      <label class="idscan-data-field-label">${e}</label>
+      <div class="idscan-data-field-input-wrapper">
+        <input 
+          type="text" 
+          class="idscan-data-field-input" 
+          value="${N(t)}" 
+          readonly
+          data-field="${i}"
+        />
+        <button 
+          class="idscan-data-field-copy" 
+          data-value="${N(t)}"
+          aria-label="Copy ${e}"
+          title="Copy to clipboard"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+function N(e) {
+  const t = document.createElement("div");
+  return t.textContent = e, t.innerHTML;
+}
+function ie(e, t) {
+  e.querySelector(".idscan-data-popup-close").addEventListener("click", () => S(e)), e.addEventListener("click", (n) => {
+    n.target === e && S(e);
+  }), e.querySelectorAll(".idscan-data-field-copy").forEach((n) => {
+    n.addEventListener("click", () => ne(n));
+  });
+  const o = (n) => {
+    n.key === "Escape" && (S(e), document.removeEventListener("keydown", o));
+  };
+  document.addEventListener("keydown", o);
+}
+function ne(e) {
+  const t = e.getAttribute("data-value");
+  navigator.clipboard.writeText(t).then(() => {
+    const i = e.innerHTML;
+    e.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `, e.classList.add("copied"), setTimeout(() => {
+      e.innerHTML = i, e.classList.remove("copied");
+    }, 1500);
+  }).catch((i) => {
+    console.error("Failed to copy:", i), alert("Failed to copy to clipboard");
+  });
+}
+function S(e) {
+  e.classList.remove("active"), setTimeout(() => {
+    e.remove();
+  }, 300);
+}
+const ae = `
+  .idscan-data-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    padding: 20px;
+  }
+  
+  .idscan-data-popup-overlay.active {
+    opacity: 1;
+  }
+  
+  .idscan-data-popup {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+  }
+  
+  .idscan-data-popup-overlay.active .idscan-data-popup {
+    transform: scale(1);
+  }
+  
+  .idscan-data-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .idscan-data-popup-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+  }
+  
+  .idscan-data-popup-close {
+    background: none;
+    border: none;
+    font-size: 32px;
+    line-height: 1;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+  
+  .idscan-data-popup-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+  
+  .idscan-data-popup-content {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  .idscan-data-field {
+    margin-bottom: 20px;
+  }
+  
+  .idscan-data-field:last-child {
+    margin-bottom: 0;
+  }
+  
+  .idscan-data-field-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  
+  .idscan-data-field-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .idscan-data-field-input {
+    width: 100%;
+    padding: 10px 45px 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    background: #f9fafb;
+    cursor: default;
+    font-family: inherit;
+  }
+  
+  .idscan-data-field-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+  }
+  
+  .idscan-data-field-copy {
+    position: absolute;
+    right: 8px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s;
+  }
+  
+  .idscan-data-field-copy:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+  }
+  
+  .idscan-data-field-copy.copied {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+  }
+  
+  .idscan-data-popup-empty {
+    text-align: center;
+    color: #6b7280;
+    padding: 40px 20px;
+    margin: 0;
+  }
+  
+  @media (max-width: 640px) {
+    .idscan-data-popup {
+      max-width: 100%;
+      max-height: 90vh;
+      margin: 10px;
+    }
+    
+    .idscan-data-popup-header {
+      padding: 16px 20px;
+    }
+    
+    .idscan-data-popup-title {
+      font-size: 18px;
+    }
+    
+    .idscan-data-popup-content {
+      padding: 20px;
+    }
+  }
+`;
+function $(e) {
+  let t = e.querySelector(".idscan-loading-overlay");
+  return t || (t = document.createElement("div"), t.className = "idscan-loading-overlay", t.innerHTML = `
+      <div class="idscan-loading-content">
+        <div class="idscan-loading-spinner">
+          <div class="idscan-spinner-ring"></div>
+          <div class="idscan-spinner-ring"></div>
+          <div class="idscan-spinner-ring"></div>
+        </div>
+        <h3 class="idscan-loading-title">Processing Document</h3>
+        <p class="idscan-loading-subtitle">Please wait while we extract the data...</p>
+      </div>
+    `, e.appendChild(t)), setTimeout(() => t.classList.add("active"), 10), t;
+}
+function M(e) {
+  const t = e.querySelector(".idscan-loading-overlay");
+  t && (t.classList.remove("active"), setTimeout(() => {
+    t.remove();
+  }, 300));
+}
+const oe = `
+  .idscan-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .idscan-loading-overlay.active {
+    opacity: 1;
+  }
+  
+  .idscan-loading-content {
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+  }
+  
+  .idscan-loading-overlay.active .idscan-loading-content {
+    transform: scale(1);
+  }
+  
+  .idscan-loading-spinner {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+  }
+  
+  .idscan-spinner-ring {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    margin: 8px;
+    border: 4px solid transparent;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: idscan-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+  
+  .idscan-spinner-ring:nth-child(1) {
+    animation-delay: -0.45s;
+    border-top-color: #3b82f6;
+  }
+  
+  .idscan-spinner-ring:nth-child(2) {
+    animation-delay: -0.3s;
+    border-top-color: #60a5fa;
+  }
+  
+  .idscan-spinner-ring:nth-child(3) {
+    animation-delay: -0.15s;
+    border-top-color: #93c5fd;
+  }
+  
+  @keyframes idscan-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .idscan-loading-title {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+  
+  .idscan-loading-subtitle {
+    margin: 0;
+    font-size: 16px;
+    color: #d1d5db;
+    font-weight: 400;
+  }
+  
+  @media (max-width: 640px) {
+    .idscan-loading-spinner {
+      width: 64px;
+      height: 64px;
+    }
+    
+    .idscan-spinner-ring {
+      width: 48px;
+      height: 48px;
+      margin: 8px;
+      border-width: 3px;
+    }
+    
+    .idscan-loading-title {
+      font-size: 20px;
+    }
+    
+    .idscan-loading-subtitle {
+      font-size: 14px;
+    }
+  }
+`;
+async function W(e, t) {
+  const i = new FormData();
+  return i.append("image", e), await (await fetch("https://phyllotaxic-denita-shamefacedly.ngrok-free.dev/api/v1/documents", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${i}`
+      Authorization: `Bearer ${t}`
     },
-    body: t
-  });
+    body: i
+  })).json();
 }
-async function $(e, i, t) {
+async function de(e, t, i) {
   if (!e.type.startsWith("image/")) {
     alert("Please select an image file");
     return;
   }
-  const n = t.querySelector(".idscan-widget-box"), d = n.innerHTML;
-  n.innerHTML = `
+  const a = i.querySelector(".idscan-widget-box"), o = a.innerHTML;
+  a.innerHTML = `
     <h3 class="idscan-widget-title">Uploading...</h3>
     <p class="idscan-widget-subtitle">Please wait while we process your document</p>
-  `;
+  `, $(i);
   try {
-    await j(e, i), n.innerHTML = `
+    const n = await W(e, t);
+    M(i), a.innerHTML = `
       <h3 class="idscan-widget-title" style="color: #10b981;">✓ Success!</h3>
       <p class="idscan-widget-subtitle">Document uploaded successfully</p>
-    `;
+    `, n && n.extracted_fields && V(n.extracted_fields, i);
   } catch {
-    n.innerHTML = `
+    M(i), a.innerHTML = `
       <h3 class="idscan-widget-title" style="color: #ef4444;">✗ Error</h3>
       <p class="idscan-widget-subtitle">Failed to upload document. Please try again.</p>
     `;
   }
   setTimeout(() => {
-    n.innerHTML = d, t.querySelector("#idscan-widget-upload-btn").onclick = () => {
-      t.querySelector("#idscan-widget-file-input").click();
+    a.innerHTML = o, i.querySelector("#idscan-widget-upload-btn").onclick = () => {
+      i.querySelector("#idscan-widget-file-input").click();
     };
   }, 2500);
 }
-async function J(e, i) {
-  const t = document.getElementById("idscan-widget-camera-container"), n = document.getElementById("idscan-widget-status"), d = t.querySelector("video"), a = t.querySelector("#idscan-widget-overlay"), o = t.querySelector("#idscan-widget-analysis");
-  let m = 0, T = !1;
-  const U = 10;
-  let A = !0, v = null, y = !1;
+async function se(e, t) {
+  const i = document.getElementById("idscan-widget-camera-container"), a = document.getElementById("idscan-widget-status"), o = i.querySelector("video"), n = i.querySelector("#idscan-widget-overlay"), d = i.querySelector("#idscan-widget-analysis");
+  let v = 0, _ = !1;
+  const G = 10;
+  let z = !0, x = null, b = !1;
   if (typeof cv > "u") {
-    n.textContent = "Loading OpenCV...";
-    const s = setInterval(() => {
-      typeof cv < "u" && cv.Mat && (clearInterval(s), y = !0);
+    a.textContent = "Loading OpenCV...";
+    const r = setInterval(() => {
+      typeof cv < "u" && cv.Mat && (clearInterval(r), b = !0);
     }, 100);
   } else
-    y = !0;
+    b = !0;
   try {
-    let M = function() {
-      A = !1, v && v.getTracks().forEach((r) => r.stop()), i && i();
-    }, D = function(r, c) {
-      if (!y || typeof cv > "u") return !1;
+    let T = function() {
+      z = !1, x && x.getTracks().forEach((l) => l.stop()), t && t();
+    }, A = function(l, s) {
+      if (!b || typeof cv > "u") return !1;
       try {
-        const w = cv.matFromImageData(r), l = new cv.Mat(), h = new cv.Mat(), I = new cv.Mat(), x = new cv.MatVector(), O = new cv.Mat();
-        cv.cvtColor(w, l, cv.COLOR_RGBA2GRAY), cv.GaussianBlur(l, h, new cv.Size(5, 5), 0), cv.Canny(h, I, 50, 150), cv.findContours(I, x, O, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-        let B = !1;
-        const V = c.w * c.h * 0.3, _ = c.w * c.h * 0.95;
-        for (let E = 0; E < x.size(); E++) {
-          const p = x.get(E), F = cv.contourArea(p);
-          if (F > V && F < _) {
-            const W = cv.arcLength(p, !0), R = new cv.Mat();
-            if (cv.approxPolyDP(p, R, 0.02 * W, !0), R.rows === 4) {
-              const u = cv.boundingRect(p), P = u.x + u.width / 2, q = u.y + u.height / 2;
-              if (P > c.x && P < c.x + c.w && q > c.y && q < c.y + c.h) {
-                const k = u.width / u.height;
-                if (k > 1.4 && k < 1.9 || k > 0.5 && k < 0.8) {
-                  B = !0;
+        const h = cv.matFromImageData(l), g = new cv.Mat(), m = new cv.Mat(), p = new cv.Mat(), c = new cv.MatVector(), P = new cv.Mat();
+        cv.cvtColor(h, g, cv.COLOR_RGBA2GRAY), cv.GaussianBlur(g, m, new cv.Size(5, 5), 0), cv.Canny(m, p, 50, 150), cv.findContours(p, c, P, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+        let q = !1;
+        const X = s.w * s.h * 0.3, Y = s.w * s.h * 0.95;
+        for (let E = 0; E < c.size(); E++) {
+          const w = c.get(E), O = cv.contourArea(w);
+          if (O > X && O < Y) {
+            const J = cv.arcLength(w, !0), I = new cv.Mat();
+            if (cv.approxPolyDP(w, I, 0.02 * J, !0), I.rows === 4) {
+              const f = cv.boundingRect(w), j = f.x + f.width / 2, F = f.y + f.height / 2;
+              if (j > s.x && j < s.x + s.w && F > s.y && F < s.y + s.h) {
+                const C = f.width / f.height;
+                if (C > 1.4 && C < 1.9 || C > 0.5 && C < 0.8) {
+                  q = !0;
                   break;
                 }
               }
             }
-            R.delete();
+            I.delete();
           }
-          p.delete();
+          w.delete();
         }
-        return w.delete(), l.delete(), h.delete(), I.delete(), x.delete(), O.delete(), B;
-      } catch (w) {
-        return console.error("OpenCV detection error:", w), !1;
+        return h.delete(), g.delete(), m.delete(), p.delete(), c.delete(), P.delete(), q;
+      } catch (h) {
+        return console.error("OpenCV detection error:", h), !1;
       }
-    }, g = function() {
-      if (!A) return;
-      if (!y) {
-        n.textContent = "Loading OpenCV...", f(s, a, "idle"), requestAnimationFrame(g);
+    }, u = function() {
+      if (!z) return;
+      if (!b) {
+        a.textContent = "Loading OpenCV...", y(r, n, "idle"), requestAnimationFrame(u);
         return;
       }
-      if (L < 20) {
-        L++, n.textContent = "Adjusting focus...", f(s, a, "idle"), requestAnimationFrame(g);
+      if (R < 20) {
+        R++, a.textContent = "Adjusting focus...", y(r, n, "idle"), requestAnimationFrame(u);
         return;
       }
-      H.drawImage(d, 0, 0, o.width, o.height);
-      const r = H.getImageData(0, 0, o.width, o.height), c = z(a);
-      if (m++, m % U === 0 && (T = D(r, c)), !T) {
-        b = 0, n.textContent = "Place ID inside the frame", f(s, a, "error"), requestAnimationFrame(g);
+      B.drawImage(o, 0, 0, d.width, d.height);
+      const l = B.getImageData(0, 0, d.width, d.height), s = U(n);
+      if (v++, v % G === 0 && (_ = A(l, s)), !_) {
+        k = 0, a.textContent = "Place ID inside the frame", y(r, n, "error"), requestAnimationFrame(u);
         return;
       }
-      const l = N(r, c);
-      if (n.textContent = l.message, f(s, a, l.state), l.ok ? b++ : b = 0, b > 40) {
-        n.textContent = "✓ Capturing...", f(s, a, "ready"), Y(o).then((h) => {
-          j(h, e.token), setTimeout(M, 1200);
+      const g = K(l, s);
+      if (a.textContent = g.message, y(r, n, g.state), g.ok ? k++ : k = 0, k > 40) {
+        a.textContent = "✓ Capturing...", y(r, n, "ready"), ee(d).then(async (m) => {
+          const p = document.querySelector(".idscan-widget-container").parentElement;
+          $(p);
+          try {
+            const c = await W(m, e.token);
+            M(p), c && c.extracted_fields && V(c.extracted_fields, p);
+          } catch (c) {
+            console.error("Upload failed:", c), M(p);
+          }
+          setTimeout(T, 1200);
         });
         return;
       }
-      requestAnimationFrame(g);
+      requestAnimationFrame(u);
     };
-    var te = M, ie = D, ne = g;
-    v = await navigator.mediaDevices.getUserMedia({
+    var ge = T, ue = A, fe = u;
+    x = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
         width: { ideal: 1920 },
         height: { ideal: 1080 }
       }
-    }), d.srcObject = v, await new Promise((r) => d.onloadedmetadata = r), await d.play(), a.width = d.videoWidth, a.height = d.videoHeight, o.width = d.videoWidth, o.height = d.videoHeight;
-    const s = a.getContext("2d"), H = o.getContext("2d");
-    let b = 0, L = 0;
-    window.addEventListener("idscan-cleanup", M, { once: !0 }), g();
-  } catch (s) {
-    console.error(s), n.textContent = "Camera access denied";
+    }), o.srcObject = x, await new Promise((l) => o.onloadedmetadata = l), await o.play(), n.width = o.videoWidth, n.height = o.videoHeight, d.width = o.videoWidth, d.height = o.videoHeight;
+    const r = n.getContext("2d"), B = d.getContext("2d");
+    let k = 0, R = 0;
+    window.addEventListener("idscan-cleanup", T, { once: !0 }), u();
+  } catch (r) {
+    console.error(r), a.textContent = "Camera access denied";
   }
 }
-async function K(e, i = {}) {
-  const t = document.querySelector(e);
-  await ee(), Z(), t.innerHTML = `
+async function ce(e, t = {}) {
+  const i = document.querySelector(e);
+  await pe(), le(), i.innerHTML = `
     <div class="idscan-widget-container">
       <div class="idscan-widget-box">
         <h3 class="idscan-widget-title">Scan your ID</h3>
@@ -203,16 +615,16 @@ async function K(e, i = {}) {
     </div>
   `, document.getElementById("idscan-widget-upload-btn").onclick = () => {
     document.getElementById("idscan-widget-file-input").click();
-  }, document.getElementById("idscan-widget-file-input").onchange = (n) => {
-    const d = n.target.files[0];
-    d && $(d, i.token, t);
+  }, document.getElementById("idscan-widget-file-input").onchange = (a) => {
+    const o = a.target.files[0];
+    o && de(o, t.token, i);
   }, document.getElementById("idscan-widget-camera-btn").onclick = () => {
-    Q(i);
+    re(t);
   };
 }
-function Q(e) {
-  const i = document.createElement("div");
-  i.id = "idscan-widget-modal", i.className = "idscan-widget-modal", i.innerHTML = `
+function re(e) {
+  const t = document.createElement("div");
+  t.id = "idscan-widget-modal", t.className = "idscan-widget-modal", t.innerHTML = `
     <div class="idscan-widget-modal-backdrop"></div>
     <div class="idscan-widget-modal-content">
       <div class="idscan-widget-modal-header">
@@ -232,19 +644,19 @@ function Q(e) {
         <div class="idscan-widget-status" id="idscan-widget-status">Starting camera...</div>
       </div>
     </div>
-  `, document.body.appendChild(i), document.getElementById("idscan-widget-modal-close").onclick = () => {
-    S();
-  }, i.querySelector(".idscan-widget-modal-backdrop").onclick = () => {
-    S();
-  }, J(e, () => {
-    S();
+  `, document.body.appendChild(t), document.getElementById("idscan-widget-modal-close").onclick = () => {
+    D();
+  }, t.querySelector(".idscan-widget-modal-backdrop").onclick = () => {
+    D();
+  }, se(e, () => {
+    D();
   });
 }
-function S() {
+function D() {
   const e = document.getElementById("idscan-widget-modal");
   e && (window.dispatchEvent(new Event("idscan-cleanup")), e.remove());
 }
-function Z() {
+function le() {
   if (document.getElementById("idscan-widget-styles")) return;
   const e = document.createElement("style");
   e.id = "idscan-widget-styles", e.textContent = `
@@ -427,20 +839,23 @@ function Z() {
         width: 100%;
       }
     }
+
+    ${ae}
+    ${oe}
   `, document.head.appendChild(e);
 }
-function ee() {
-  return new Promise((e, i) => {
+function pe() {
+  return new Promise((e, t) => {
     if (window.cv && window.cv.Mat) {
       e();
       return;
     }
-    const t = document.createElement("script");
-    t.src = "https://docs.opencv.org/4.x/opencv.js", t.async = !0, t.onload = () => {
-      const n = setInterval(() => {
-        window.cv && window.cv.Mat && (clearInterval(n), e());
+    const i = document.createElement("script");
+    i.src = "https://docs.opencv.org/4.x/opencv.js", i.async = !0, i.onload = () => {
+      const a = setInterval(() => {
+        window.cv && window.cv.Mat && (clearInterval(a), e());
       }, 50);
-    }, t.onerror = i, document.head.appendChild(t);
+    }, i.onerror = t, document.head.appendChild(i);
   });
 }
-window.IdScan = { mount: K };
+window.IdScan = { mount: ce };

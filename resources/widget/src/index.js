@@ -1,5 +1,7 @@
 import { startCamera } from './camera';
 import { handleFileUpload } from './uploader';
+import { dataPopupStyles } from './dataPopup.js';
+import { loadingIndicatorStyles } from './loadingIndicator.js';
 
 async function mount(selector, options = {}) {
   const container = document.querySelector(selector);
@@ -295,6 +297,9 @@ function injectStyles() {
         width: 100%;
       }
     }
+
+    ${dataPopupStyles}
+    ${loadingIndicatorStyles}
   `;
   document.head.appendChild(style);
 }

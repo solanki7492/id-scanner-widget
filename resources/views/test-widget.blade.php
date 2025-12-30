@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ID Scanner Widget Demo</title>
-  <script src="/widget/idscan.js"></script>
+  <script src="{{ env('IDSCAN_WIDGET_URL', '/widget/idscan.js') }}"></script>
   <style>
       body {
         margin: 0;
@@ -120,7 +120,7 @@
 
   <script>
     // Simple one-line embed - widget is production-ready
-    IdScan.mount("#idscan", { token: "test" });
+    IdScan.mount("#idscan", { token: "{{ env('IDSCAN_TOKEN', 'test') }}" });
   </script>
 </body>
 </html>

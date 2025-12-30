@@ -2,6 +2,8 @@ import { drawOverlay, getOverlayBox } from './overlay';
 import { analyzeFrame } from './analyzer';
 import { captureFrame } from './capture';
 import { upload } from './uploader';
+import { showDataPopup } from './dataPopup.js';
+import { showLoadingIndicator, hideLoadingIndicator } from './loadingIndicator.js';
 
 export async function startCamera(options, onClose) {
   const container = document.getElementById("idscan-widget-camera-container");
@@ -203,8 +205,28 @@ export async function startCamera(options, onClose) {
         statusEl.textContent = "✓ Capturing...";
         drawOverlay(overlayCtx, overlay, "ready");
 
-        captureFrame(analysis).then(blob => {
-          upload(blob, options.token);
+        captureFrame(analysis).then(async blob => {
+          const widgetContainer = document.querySelector('.idscan-widget-container').parentElement;
+
+          // Show loading indicator
+          showLoadingIndicator(widgetContainer);
+
+          try {
+            const responseData = await upload(blob, options.token);
+
+            // Hide loading indicator
+            hideLoadingIndicator(widgetContainer);
+
+            // Show data popup if extracted_fields exist
+            if (responseData && responseData.extracted_fields) {
+              showDataPopup(responseData.extracted_fields, widgetContainer);
+            }
+          } catch (error) {
+            console.error('Upload failed:', error);
+            // Hide loading indicator on error
+            hideLoadingIndicator(widgetContainer);
+          }
+
           setTimeout(cleanup, 1200);
         });
         return;
